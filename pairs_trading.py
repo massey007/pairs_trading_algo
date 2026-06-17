@@ -191,7 +191,7 @@ class PairsBacktest:
             1 + self.data["Total_Strat_Return"]
         ).cumprod().fillna(1)
 
-    def compute_metrics(self, risk_free = 'DGS3MO'):
+    def compute_metrics(self, risk_free = 'DFF'):
 
         self.data_loader()
         self.run_simulation()
@@ -204,7 +204,7 @@ class PairsBacktest:
 
         risk_free_series = pd.Series([], dtype='float64') # Initialize as empty Series
         try:
-          risk_free_df = fred.get_series('DGS3MO', self.start_date, self.end_date).to_frame(name='Close')
+          risk_free_df = fred.get_series(risk_free, self.start_date, self.end_date).to_frame(name='Close')
           if not risk_free_df.empty and 'Close' in risk_free_df.columns:
               risk_free_series = risk_free_df['Close'].squeeze() # Added .squeeze()
           else:

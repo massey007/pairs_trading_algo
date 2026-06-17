@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import pandas_datareader.data as pdr
 import seaborn as sns
 from sklearn.linear_model import LinearRegression
+from fredapi import Fred
+fred = Fred(api_key='17a30f1e933d9c9de2afc4bcd7a5fbcb')
 import requests
 
 import warnings
@@ -189,7 +191,7 @@ class PairsBacktest:
             1 + self.data["Total_Strat_Return"]
         ).cumprod().fillna(1)
 
-    def compute_metrics(self, risk_free = '^IRX'):
+    def compute_metrics(self, risk_free = 'DGS3MO'):
 
         self.data_loader()
         self.run_simulation()
@@ -202,7 +204,7 @@ class PairsBacktest:
 
         risk_free_series = pd.Series([], dtype='float64') # Initialize as empty Series
         try:
-          risk_free_df = yf.download(risk_free, start=self.start_date, end=self.end_date)
+          risk_free_df = fred.get_series('DGS3MO', self.start_date, self.end_date).to_frame(name='Close')
           if not risk_free_df.empty and 'Close' in risk_free_df.columns:
               risk_free_series = risk_free_df['Close'].squeeze() # Added .squeeze()
           else:

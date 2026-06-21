@@ -34,6 +34,7 @@ class PairsBacktest:
 
         self.df = None
 
+#########################################################################################################################
     def data_loader(self):
 
         """
@@ -101,6 +102,7 @@ class PairsBacktest:
 
         return ticker_a, ticker_b
 
+#########################################################################################################################
     def generate_signals(self):
 
         """
@@ -144,6 +146,7 @@ class PairsBacktest:
         self.data["Active_Pos_A"] = self.data["Pos_A"].shift(1).fillna(0)
         self.data["Active_Pos_B"] = self.data["Pos_B"].shift(1).fillna(0)
 
+#########################################################################################################################
     def run_simulation(self, initial_capital=1_00.00, borrow_fee_annual=0.02, transaction_cost_per_trade = 0.05):
 
         self.generate_signals()
@@ -191,6 +194,7 @@ class PairsBacktest:
             1 + self.data["Total_Strat_Return"]
         ).cumprod().fillna(1)
 
+##########################################################################################################################
     def compute_metrics(self, risk_free = 'DFF'):
 
         self.data_loader()

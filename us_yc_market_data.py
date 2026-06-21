@@ -15,6 +15,7 @@ from fredapi import Fred
 fred = Fred(api_key='17a30f1e933d9c9de2afc4bcd7a5fbcb')
 
 class us_yield_curve_market_data:
+
     def __init__(self, start_date, end_date):
 
         self.start_date = start_date
@@ -30,7 +31,6 @@ class us_yield_curve_market_data:
         self.ten_year = None
         self.twenty_year = None
         self.thirty_year = None
-        self.data = None
 
     def us_yield_curve(self):
 
@@ -75,19 +75,10 @@ class us_yield_curve_market_data:
         self.thirty_year = pd.DataFrame(self.thirty_year)
         self.thirty_year.rename(columns={0:'Thirty_Year_US'}, inplace=True)
 
-
-    def us_market_data(self, ticker):
-        self.ticker = ticker
-        ticker = ['^GSPC', '^VIX', 'GC=F', 'BZ=F']
-        self.data = yf.download(self.ticker, start=self.start_date, end=self.end_date)
-
     def merge_data(self):
         if self.data is not None:
             self.data = pd.DataFrame({
-                'sp500': self.data['Close']['^GSPC'].squeeze(),
-                'vix': self.data['Close']['^VIX'].squeeze(),
-                'gold': self.data['Close']['GC=F'].squeeze(),
-                'oil': self.data['Close']['BZ=F'].squeeze(),
+                'Date': self.repo.index,
                 'Repo_Rate_US': self.repo['Repo_Rate_US'].squeeze(),
                 'One_Month_US': self.one_month['One_Month_US'].squeeze(),
                 'Three_Month_US': self.three_month['Three_Month_US'].squeeze(),
@@ -124,3 +115,10 @@ class us_yield_curve_market_data:
             plt.show()
         else:
             print("No data to plot. Please fetch and merge data first.")
+
+        def dataframe(self):
+            if self.data is not None:
+                return self.data
+            else:
+                print("No data available. Please fetch and merge data first.")
+                return None

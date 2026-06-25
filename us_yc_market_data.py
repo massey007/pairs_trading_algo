@@ -1,8 +1,6 @@
 # This code will pull the entire yield curve from the FRED API and save it to a CSV file.
 # It will also print the yield curve to the console.
 
-from tracemalloc import start
-
 import matplotlib.pyplot as plt
 import yfinance as yf
 import numpy as np
@@ -31,6 +29,7 @@ class us_yield_curve_market_data:
         self.ten_year = None
         self.twenty_year = None
         self.thirty_year = None
+        self.data = None
 
     def us_yield_curve(self):
 
@@ -76,45 +75,41 @@ class us_yield_curve_market_data:
         self.thirty_year.rename(columns={0:'Thirty_Year_US'}, inplace=True)
 
     def merge_data(self):
-        if self.data is not None:
-            self.data = pd.DataFrame({
-                'Date': self.repo.index,
-                'Repo_Rate_US': self.repo['Repo_Rate_US'].squeeze(),
-                'One_Month_US': self.one_month['One_Month_US'].squeeze(),
-                'Three_Month_US': self.three_month['Three_Month_US'].squeeze(),
-                'Six_Month_US': self.six_month['Six_Month_US'].squeeze(),
-                'One_Year_US': self.one_year['One_Year_US'].squeeze(),
-                'Two_Year_US': self.two_year['Two_Year_US'].squeeze(),
-                'Five_Year_US': self.five_year['Five_Year_US'].squeeze(),
-                'Ten_Year_US': self.ten_year['Ten_Year_US'].squeeze(),
-                'Twenty_Year_US': self.twenty_year['Twenty_Year_US'].squeeze(),
-                'Thirty_Year_US': self.thirty_year['Thirty_Year_US'].squeeze()
-            })
-            self.data.dropna(inplace=True)
-        else:
-            print("No data to merge. Please fetch data first.")
+  
+        self.data = pd.DataFrame({
+            'One_Month_US': self.one_month['One_Month_US'].squeeze(),
+            'Three_Month_US': self.three_month['Three_Month_US'].squeeze().reindex(self.one_month.index),
+            'Six_Month_US': self.six_month['Six_Month_US'].squeeze().reindex(self.one_month.index),
+            'One_Year_US': self.one_year['One_Year_US'].squeeze().reindex(self.one_month.index),
+            'Two_Year_US': self.two_year['Two_Year_US'].squeeze().reindex(self.one_month.index),
+            'Five_Year_US': self.five_year['Five_Year_US'].squeeze().reindex(self.one_month.index),
+            'Ten_Year_US': self.ten_year['Ten_Year_US'].squeeze().reindex(self.one_month.index),
+            'Twenty_Year_US': self.twenty_year['Twenty_Year_US'].squeeze().reindex(self.one_month.index),
+            'Thirty_Year_US': self.thirty_year['Thirty_Year_US'].squeeze().reindex(self.one_month.index)
+        })
+        self.data = self.data.set_index()
+        self.data.dropna(inplace=True)
+
 
     def plot_yield_curve(self):
-        if self.data is not None:
-            plt.figure(figsize=(12, 6))
-            plt.plot(self.data.index, self.data['Repo_Rate_US'], label='Repo Rate')
-            plt.plot(self.data.index, self.data['One_Month_US'], label='1 Month')
-            plt.plot(self.data.index, self.data['Three_Month_US'], label='3 Month')
-            plt.plot(self.data.index, self.data['Six_Month_US'], label='6 Month')
-            plt.plot(self.data.index, self.data['One_Year_US'], label='1 Year')
-            plt.plot(self.data.index, self.data['Two_Year_US'], label='2 Year')
-            plt.plot(self.data.index, self.data['Five_Year_US'], label='5 Year')
-            plt.plot(self.data.index, self.data['Ten_Year_US'], label='10 Year')
-            plt.plot(self.data.index, self.data['Twenty_Year_US'], label='20 Year')
-            plt.plot(self.data.index, self.data['Thirty_Year_US'], label='30 Year')
-            plt.title('US Yield Curve Over Time')
-            plt.xlabel('Date')
-            plt.ylabel('Yield (%)')
-            plt.legend()
-            plt.grid()
-            plt.show()
-        else:
-            print("No data to plot. Please fetch and merge data first.")
+  
+        plt.figure(figsize=(12, 6))
+        plt.plot(self.data.index, self.data['Repo_Rate_US'], label='Repo Rate')
+        plt.plot(self.data.index, self.data['One_Month_US'], label='1 Month')
+        plt.plot(self.data.index, self.data['Three_Month_US'], label='3 Month')
+        plt.plot(self.data.index, self.data['Six_Month_US'], label='6 Month')
+        plt.plot(self.data.index, self.data['One_Year_US'], label='1 Year')
+        plt.plot(self.data.index, self.data['Two_Year_US'], label='2 Year')
+        plt.plot(self.data.index, self.data['Five_Year_US'], label='5 Year')
+        plt.plot(self.data.index, self.data['Ten_Year_US'], label='10 Year')
+        plt.plot(self.data.index, self.data['Twenty_Year_US'], label='20 Year')
+        plt.plot(self.data.index, self.data['Thirty_Year_US'], label='30 Year')
+        plt.title('US Yield Curve Over Time')
+        plt.xlabel('Date')
+        plt.ylabel('Yield (%)')
+        plt.legend()
+        plt.grid()
+        plt.show()
 
         def dataframe(self):
             if self.data is not None:

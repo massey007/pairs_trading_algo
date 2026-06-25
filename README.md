@@ -7,10 +7,10 @@ The idea is centered around not betting on market direction, instead you bet on 
 The Math Sequence:
 
 1. Calculate the spread:
-$$\text{Spread}_t = ln(P_{A, t}) - (\beta \times ln(P_{B, t}))$$
+$\text{Spread}_t = ln(P_{A, t}) - (\beta \times ln(P_{B, t}))$
 (where $\beta$ is the hedge ratio calculated via linear regression).
 2. Calculate the Z-score:
-$$Z_t = \frac{\text{Spread}_t-\mu_{\text{Spread}}}{\sigma_{\text{Spread}}}$$
+$Z_t = \frac{\text{Spread}_t-\mu_{\text{Spread}}}{\sigma_{\text{Spread}}}$
 (Where $\mu = $ The rolling historical mean of the spread, $\sigma = $ The rolling historical standard deviation of the spread.
 
 ### Execution Rulles (the Strategy)

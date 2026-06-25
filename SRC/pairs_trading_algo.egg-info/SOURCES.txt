@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/__init__.py
+src/pairs_trading.py
+src/us_yc.py
+src/pairs_trading_algo.egg-info/PKG-INFO
+src/pairs_trading_algo.egg-info/SOURCES.txt
+src/pairs_trading_algo.egg-info/dependency_links.txt
+src/pairs_trading_algo.egg-info/top_level.txt

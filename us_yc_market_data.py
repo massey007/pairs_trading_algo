@@ -33,19 +33,15 @@ class USYieldCurveMarketData:
     def __init__(self, years):
 
         self.years = years
-
         self._data = None
 
     def _build(self):
-
-        # Only download data if it hasn't been downloaded yet
 
         if self._data is not None:
 
             return
 
         today = datetime.datetime.today()
-
         start_date = today - relativedelta(years=self.years)
 
         data = {}
@@ -55,9 +51,7 @@ class USYieldCurveMarketData:
             series = fred.get_series(
 
                 fred_series,
-
                 observation_start=start_date.strftime('%Y-%m-%d'),
-
                 observation_end=today.strftime('%Y-%m-%d')
 
             )
@@ -65,20 +59,11 @@ class USYieldCurveMarketData:
             data[column_name] = series
 
         self._data = pd.DataFrame(data)
-
-        # Forward-fill weekends and holidays
-
         self._data = self._data.ffill()
-
-        # Remove any remaining NaNs
-
         self._data = self._data.dropna()
 
     @property
     def data(self):
 
         self._build()
-
-        # Return a copy to prevent accidental modification
-
         return self._data.copy()

@@ -136,7 +136,8 @@ class PairsBacktest:
         loader = DataLoader(self.years)
         loader.market_data(self.years, self.tickers)
         self.market_data = loader.market_data
-
+        self.start_date = loader.start_date
+        self.end_date = loader.end_date
         """
 
         Computes key performance metrics for strategy health evaluation.
@@ -238,5 +239,5 @@ class PairsBacktest:
 
         # Put matrics in a dataframe
         metrics1 = pd.DataFrame(metrics.items(), columns=['Metric', 'Value'])
-        
+
         return metrics1

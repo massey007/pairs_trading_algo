@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore")
 class PairsBacktest:
 
     def __init__(
-        self, tickers, years, market_ticker = '^GSPC', lookback_window=30, entry_z=2.0
+        self, years, tickers, market_ticker = '^GSPC', lookback_window=30, entry_z=2.0
         ):
 
         """
@@ -33,9 +33,6 @@ class PairsBacktest:
         self.window = lookback_window
         self.entry_z = entry_z
 
-
-        self.df = None
-
 #########################################################################################################################
 
     def generate_signals(self):
@@ -46,9 +43,11 @@ class PairsBacktest:
 
         """
 
-        loader = DataLoader(self.tickers, self.years)
-        data = loader.market_data()
+        loader = DataLoader(self.years)
+        loader.market_data(self.years, self.tickers)
+        data = loader.data
         self.data = data
+
         # 1. Calculate beta using Linear regression (regress Log_A on Log_B)
         X = self.data["Log_B"].values.reshape(-1, 1)
         y = self.data["Log_A"].values.reshape(-1, 1)
@@ -134,6 +133,9 @@ class PairsBacktest:
     def compute_metrics(self, risk_free = 'DFF'):
 
         self.run_simulation()
+        loader = DataLoader(self.years)
+        loader.market_data(self.years, self.tickers)
+        self.market_data = loader.market_data
 
         """
 
@@ -236,4 +238,5 @@ class PairsBacktest:
 
         # Put matrics in a dataframe
         metrics1 = pd.DataFrame(metrics.items(), columns=['Metric', 'Value'])
+        
         return metrics1

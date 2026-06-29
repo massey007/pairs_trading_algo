@@ -72,8 +72,9 @@ class DataLoader:
     
 #########################################################################################################################
     
-    def market_data(self, tickers, market_ticker = '^GSPC', lookback_window=30):
+    def market_data(self, years, tickers, market_ticker = '^GSPC', lookback_window=30):
 
+        self.years = years
         self.tickers = tickers
         self.market_ticker = market_ticker
         self.lookback_window = lookback_window
@@ -114,11 +115,11 @@ class DataLoader:
             variables[i + "_log_price"] = np.log(series_close)
 
         # Create primary working dataframe synced to market trading days
-        df = pd.DataFrame(variables, index=market_data.index).dropna()
+        self.df = pd.DataFrame(variables, index=market_data.index).dropna()
 
         # Isolate log price columns exclusively to calculate correlation matrix
         log_cols = [i + "_log_price" for i in self.tickers]
-        corr_matrix = df[log_cols].corr()
+        corr_matrix = self.df[log_cols].corr()
 
         # Unstack upper triangle to locate the highest correlated asset pair
         unstacked = corr_matrix.where(
@@ -135,10 +136,12 @@ class DataLoader:
         ticker_b = top_pair[1].replace("_log_price", "")
 
         # Target raw price columns for simulation, log prices for signals
-        market_data = pd.DataFrame(index=df.index)
-        market_data["Price_A"] = df[ticker_a + "_raw_price"]
-        market_data["Price_B"] = df[ticker_b + "_raw_price"]
-        market_data["Log_A"] = df[ticker_a + "_log_price"]
-        market_data["Log_B"] = df[ticker_b + "_log_price"]
+        self.data = pd.DataFrame(index=self.df.index)
+        self.data["Price_A"] = self.df[ticker_a + "_raw_price"]
+        self.data["Price_B"] = self.df[ticker_b + "_raw_price"]
+        self.data["Log_A"] = self.df[ticker_a + "_log_price"]
+        self.data["Log_B"] = self.df[ticker_b + "_log_price"]
 
-        return market_data
+        self.market_data = market_data
+        self.ticker_a = ticker_a
+        self.ticker_b = ticker_b

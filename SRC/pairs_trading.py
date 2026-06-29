@@ -11,6 +11,8 @@ from fredapi import Fred
 fred = Fred(api_key='17a30f1e933d9c9de2afc4bcd7a5fbcb')
 import requests
 
+from SRC.data_loader import DataLoader
+
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -35,74 +37,7 @@ class PairsBacktest:
         self.df = None
 
 #########################################################################################################################
-    def data_loader(self):
 
-        """
-
-        Loads historical price data from Yahoo Finance.
-
-        """
-
-        n = self.years
-        start_date = datetime.datetime.now() - datetime.timedelta(days=365*n)
-        end_date = datetime.datetime.now()
-        self.start_date = start_date
-        self.end_date = end_date
-
-        try:
-          stock_data = yf.download(self.tickers, start=start_date, end=end_date)
-          market_data = yf.download(self.market_ticker, start=start_date, end=end_date)
-          self.market_data = market_data
-
-        except KeyError as error:
-          print(f"yfinance has returned: {error}")
-
-        variables = {}
-
-        # Safely handle single ticker vs mutli-ticker yfinance structural output
-        if isinstance(market_data.columns, pd.MultiIndex):variables["market_log_price"] = np.log(
-                      market_data["Close"][self.market_ticker])
-        else:
-            variables["market_log_price"] = np.log(market_data["Close"])
-
-        # Loop through tickers and strictly store raw close and log prices seperately
-        for i in self.tickers:
-            # Flatten multiindex columns from stock_data
-            series_close = stock_data["Close"][i]
-            variables[i + "_raw_price"] = series_close
-            variables[i + "_log_price"] = np.log(series_close)
-
-        # Create primary working dataframe synced to market trading days
-        self.df = pd.DataFrame(variables, index=market_data.index).dropna()
-
-        # Isolate log price columns exclusively to calculate correlation matrix
-        log_cols = [i + "_log_price" for i in self.tickers]
-        corr_matrix = self.df[log_cols].corr()
-
-        # Unstack upper triangle to locate the highest correlated asset pair
-        unstacked = corr_matrix.where(
-            np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
-        ).unstack()
-
-        highest_pairs = unstacked.abs().sort_values(ascending=False)
-
-        # Top_pair holds strings like ('AAPL_log_price', 'MSFT_log_price')
-        top_pair = highest_pairs.index[0]
-
-        # Extract the matching base ticker names by stripping out suffix
-        ticker_a = top_pair[0].replace("_log_price", "")
-        ticker_b = top_pair[1].replace("_log_price", "")
-
-        # Target raw price columns for simulation, log prices for signals
-        self.data = pd.DataFrame(index=self.df.index)
-        self.data["Price_A"] = self.df[ticker_a + "_raw_price"]
-        self.data["Price_B"] = self.df[ticker_b + "_raw_price"]
-        self.data["Log_A"] = self.df[ticker_a + "_log_price"]
-        self.data["Log_B"] = self.df[ticker_b + "_log_price"]
-
-        return ticker_a, ticker_b
-
-#########################################################################################################################
     def generate_signals(self):
 
         """
@@ -111,8 +46,9 @@ class PairsBacktest:
 
         """
 
-        self.data_loader()
-
+        loader = DataLoader(self.tickers, self.years)
+        data = loader.market_data()
+        self.data = data
         # 1. Calculate beta using Linear regression (regress Log_A on Log_B)
         X = self.data["Log_B"].values.reshape(-1, 1)
         y = self.data["Log_A"].values.reshape(-1, 1)
@@ -197,7 +133,6 @@ class PairsBacktest:
 ##########################################################################################################################
     def compute_metrics(self, risk_free = 'DFF'):
 
-        self.data_loader()
         self.run_simulation()
 
         """

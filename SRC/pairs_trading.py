@@ -130,7 +130,7 @@ class PairsBacktest:
         ).cumprod().fillna(1)
 
 ##########################################################################################################################
-    def compute_metrics(self, risk_free = 'DFF'):
+    def compute_metrics(self, risk_free = 'DGS3MO'):
 
         self.run_simulation()
         loader = DataLoader(self.years)
@@ -138,6 +138,7 @@ class PairsBacktest:
         self.market_data = loader.market_data
         self.start_date = loader.start_date
         self.end_date = loader.end_date
+        
         """
 
         Computes key performance metrics for strategy health evaluation.

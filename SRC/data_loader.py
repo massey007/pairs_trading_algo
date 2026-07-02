@@ -71,6 +71,7 @@ class DataLoader:
         return self.yields.copy()
     
 #########################################################################################################################
+
     
     def market_data(self, years, tickers, market_ticker = '^GSPC', lookback_window=30):
 
@@ -145,3 +146,21 @@ class DataLoader:
         self.market_data = market_data
         self.ticker_a = ticker_a
         self.ticker_b = ticker_b
+
+def sayields(date):
+    
+    url = f'https://rbond.co.za/api/v1/curve/{date}'
+    
+    data = pd.read_json(url)[['data'][0]]
+    data = data.apply(lambda x: pd.Series(x))
+
+    data = data.set_index('years_to_maturity')
+    data = data.sort_index()
+
+    data = data[data['yield_pct'] != 0]  # Filter out rows where yield is 0
+    data = data[data['bond_type'] != 'ilb']  # Filter out rows where bond_type is 'ilb'
+    data = data[data['bond_type'] != 'swap']  # Filter out rows where bond_type is 'swap'
+
+    data = data[~data.index.duplicated(keep='first')]  # Remove duplicate indices, keeping the first occurrence
+
+    return data

@@ -2,12 +2,11 @@ README.md
 pyproject.toml
 setup.py
 SRC/__init__.py
+SRC/data_loader.py
 SRC/pairs_trading.py
-SRC/us_yc.py
 pairs_trading_algo.egg-info/PKG-INFO
 pairs_trading_algo.egg-info/SOURCES.txt
 pairs_trading_algo.egg-info/dependency_links.txt
 pairs_trading_algo.egg-info/top_level.txt
 src/__init__.py
 src/pairs_trading.py
-src/us_yc.py

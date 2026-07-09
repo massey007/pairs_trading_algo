@@ -1,3 +1,13 @@
+""""
+This is the main module for the pairs trading backtesting framework. 
+It contains the PairsBacktest class, which is responsible for simulating a pairs trading strategy based on historical price data. 
+The class provides methods to generate trading signals, run simulations, and compute key performance metrics.
+
+I do have want to state that the code is designed to be modular and extensible,
+allowing for easy integration of additional features or modifications to the trading strategy.
+
+"""
+
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -24,6 +34,9 @@ class PairsBacktest:
 
         """
         Initializes the backtester with historical price dataframes.
+
+        For SA tickers, change market_ticker to 'J203' and tickers to ['AGL.JO', 'SOL.JO'].
+        This same logic should be followed for when using any other tickers from any other country. The market_ticker should be the main index for that country.
 
         """
 
@@ -82,16 +95,22 @@ class PairsBacktest:
         self.data["Active_Pos_B"] = self.data["Pos_B"].shift(1).fillna(0)
 
 #########################################################################################################################
-    def run_simulation(self, initial_capital=1_00.00, borrow_fee_annual=0.02, transaction_cost_per_trade = 0.05):
+    def run_simulation(self, initial_capital:int =1_00.00, borrow_fee_annual:float=0.02, transaction_cost_per_trade:float = 0.05):
 
+
+        """
+        Runs the backtest simulation, calculating returns and equity curve.
+        
+        Parameters:
+        initial_capital (int): The starting capital for the simulation (default is 100.00).
+        borrow_fee_annual (float): Annual borrowing fee for short positions (default is 0.02 or 2%).
+        transaction_cost_per_trade (float): Transaction cost per trade as a percentage (default is 0.05 or 5%).
+        -> Returns:
+        None: The method modifies the self.data DataFrame in place, adding columns for returns and equity curve.
+
+        """
         self.generate_signals()
         self.initial_capital = initial_capital # Store initial_capital as an instance variable
-
-        """
-
-        Simulates trading execution and tracks mathematical portfolio returns.
-
-        """
 
         # Calculate asset returns
         self.data["Ret_A"] = self.data["Price_A"].pct_change()
@@ -130,7 +149,18 @@ class PairsBacktest:
         ).cumprod().fillna(1)
 
 ##########################################################################################################################
-    def compute_metrics(self, risk_free = 'DGS3MO'):
+    def compute_metrics(self, risk_free: str = 'DGS3MO'):
+
+        """
+        Computes key performance metrics for strategy health evaluation.
+        
+        Parameters:
+        risk_free (str): The FRED series ID for the risk-free rate (default is 'DGS3MO' for 3-Month Treasury Bill). Note when using SA tickers, 
+        change this to 'RIFLGFCY01SAFRM' for the South African 3-Month Treasury Bill or its equivalent if not available.
+        -> Returns:
+        pd.DataFrame: A DataFrame containing key performance metrics such as Sharpe Ratio, Alpha, Total Return, Max Drawdown, and other relevant statistics.
+
+        """
 
         self.run_simulation()
         loader = DataLoader(self.years)
@@ -138,12 +168,6 @@ class PairsBacktest:
         self.market_data = loader.market_data
         self.start_date = loader.start_date
         self.end_date = loader.end_date
-        
-        """
-
-        Computes key performance metrics for strategy health evaluation.
-
-        """
 
         risk_free_series = pd.Series([], dtype='float64') # Initialize as empty Series
         try:
@@ -218,17 +242,21 @@ class PairsBacktest:
         # Ensure that total_strat_return_aligned is not empty and has variance for std() calculation
         sharpe_ratio = 0.0 # Default value
         if not total_strat_return_aligned.empty and total_strat_return_aligned.std() != 0:
-            daily_sharpe_ratio = (total_strat_return_aligned.mean() - daily_risk_free_rate_for_metrics.mean() )/ total_strat_return_aligned.std()
+            daily_sharpe_ratio = (total_strat_return_aligned.mean() - daily_risk_free_rate_for_metrics.mean()) / total_strat_return_aligned.std()
             sharpe_ratio = daily_sharpe_ratio * np.sqrt(252) # Annualize Sharpe Ratio
 
         peak = self.data["Equity"].cummax()
         drawdown = (self.data["Equity"] - peak) / peak
         max_dd = drawdown.min()
+        volatility = total_strat_return_aligned.std() * np.sqrt(252) # Annualized volatility
+        market_volatility = market_return_for_regression.std() * np.sqrt(252) # Annualized market volatility
 
         metrics = {
             "Sharpe Ratio"    : f"{sharpe_ratio:.5f}",
             "Alpha"           : f"{alpha * 100:.5f}%",
             "Total Return"    : f"{total_return:.2%}",
+            "Strat Volatility"      : f"{volatility:.5f}",
+            "Market Volatility"    : f"{market_volatility:.5f}",
             "Max Drawdown"    : f"{max_dd:.2%}",
             "Start Date"      : self.start_date.strftime("%Y-%m-%d"),
             "End Date"        : self.end_date.strftime("%Y-%m-%d"),

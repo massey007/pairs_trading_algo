@@ -35,6 +35,9 @@ class PairsBacktest:
         """
         Initializes the backtester with historical price dataframes.
 
+        For SA tickers, change market_ticker to 'J203' and tickers to ['AGL.JO', 'SOL.JO'].
+        This same logic should be followed for when using any other tickers from any other country. The market_ticker should be the main index for that country.
+
         """
 
         self.tickers = tickers
@@ -152,7 +155,8 @@ class PairsBacktest:
         Computes key performance metrics for strategy health evaluation.
         
         Parameters:
-        risk_free (str): The FRED series ID for the risk-free rate (default is 'DGS3MO' for 3-Month Treasury Bill).
+        risk_free (str): The FRED series ID for the risk-free rate (default is 'DGS3MO' for 3-Month Treasury Bill). Note when using SA tickers, 
+        change this to 'RIFLGFCY01SAFRM' for the South African 3-Month Treasury Bill or its equivalent if not available.
         -> Returns:
         pd.DataFrame: A DataFrame containing key performance metrics such as Sharpe Ratio, Alpha, Total Return, Max Drawdown, and other relevant statistics.
 
@@ -238,17 +242,21 @@ class PairsBacktest:
         # Ensure that total_strat_return_aligned is not empty and has variance for std() calculation
         sharpe_ratio = 0.0 # Default value
         if not total_strat_return_aligned.empty and total_strat_return_aligned.std() != 0:
-            daily_sharpe_ratio = (total_strat_return_aligned.mean() - daily_risk_free_rate_for_metrics.mean() )/ total_strat_return_aligned.std()
+            daily_sharpe_ratio = (total_strat_return_aligned.mean() - daily_risk_free_rate_for_metrics.mean()) / total_strat_return_aligned.std()
             sharpe_ratio = daily_sharpe_ratio * np.sqrt(252) # Annualize Sharpe Ratio
 
         peak = self.data["Equity"].cummax()
         drawdown = (self.data["Equity"] - peak) / peak
         max_dd = drawdown.min()
+        volatility = total_strat_return_aligned.std() * np.sqrt(252) # Annualized volatility
+        market_volatility = market_return_for_regression.std() * np.sqrt(252) # Annualized market volatility
 
         metrics = {
             "Sharpe Ratio"    : f"{sharpe_ratio:.5f}",
             "Alpha"           : f"{alpha * 100:.5f}%",
             "Total Return"    : f"{total_return:.2%}",
+            "Strat Volatility"      : f"{volatility:.5f}",
+            "Market Volatility"    : f"{market_volatility:.5f}",
             "Max Drawdown"    : f"{max_dd:.2%}",
             "Start Date"      : self.start_date.strftime("%Y-%m-%d"),
             "End Date"        : self.end_date.strftime("%Y-%m-%d"),

@@ -1,3 +1,13 @@
+""""
+This is the main module for the pairs trading backtesting framework. 
+It contains the PairsBacktest class, which is responsible for simulating a pairs trading strategy based on historical price data. 
+The class provides methods to generate trading signals, run simulations, and compute key performance metrics.
+
+I do have want to state that the code is designed to be modular and extensible,
+allowing for easy integration of additional features or modifications to the trading strategy.
+
+"""
+
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -82,16 +92,22 @@ class PairsBacktest:
         self.data["Active_Pos_B"] = self.data["Pos_B"].shift(1).fillna(0)
 
 #########################################################################################################################
-    def run_simulation(self, initial_capital=1_00.00, borrow_fee_annual=0.02, transaction_cost_per_trade = 0.05):
+    def run_simulation(self, initial_capital:int =1_00.00, borrow_fee_annual:float=0.02, transaction_cost_per_trade:float = 0.05):
 
+
+        """
+        Runs the backtest simulation, calculating returns and equity curve.
+        
+        Parameters:
+        initial_capital (int): The starting capital for the simulation (default is 100.00).
+        borrow_fee_annual (float): Annual borrowing fee for short positions (default is 0.02 or 2%).
+        transaction_cost_per_trade (float): Transaction cost per trade as a percentage (default is 0.05 or 5%).
+        -> Returns:
+        None: The method modifies the self.data DataFrame in place, adding columns for returns and equity curve.
+
+        """
         self.generate_signals()
         self.initial_capital = initial_capital # Store initial_capital as an instance variable
-
-        """
-
-        Simulates trading execution and tracks mathematical portfolio returns.
-
-        """
 
         # Calculate asset returns
         self.data["Ret_A"] = self.data["Price_A"].pct_change()
@@ -130,7 +146,17 @@ class PairsBacktest:
         ).cumprod().fillna(1)
 
 ##########################################################################################################################
-    def compute_metrics(self, risk_free = 'DGS3MO'):
+    def compute_metrics(self, risk_free: str = 'DGS3MO'):
+
+        """
+        Computes key performance metrics for strategy health evaluation.
+        
+        Parameters:
+        risk_free (str): The FRED series ID for the risk-free rate (default is 'DGS3MO' for 3-Month Treasury Bill).
+        -> Returns:
+        pd.DataFrame: A DataFrame containing key performance metrics such as Sharpe Ratio, Alpha, Total Return, Max Drawdown, and other relevant statistics.
+
+        """
 
         self.run_simulation()
         loader = DataLoader(self.years)
@@ -138,12 +164,6 @@ class PairsBacktest:
         self.market_data = loader.market_data
         self.start_date = loader.start_date
         self.end_date = loader.end_date
-        
-        """
-
-        Computes key performance metrics for strategy health evaluation.
-
-        """
 
         risk_free_series = pd.Series([], dtype='float64') # Initialize as empty Series
         try:

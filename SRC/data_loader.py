@@ -1,5 +1,10 @@
-# This code will pull the entire yield curve from the FRED API and save it to a CSV file.
-# It will also print the yield curve to the console.
+"""
+This module contains the DataLoader class, which is responsible for loading and processing financial 
+data from various sources, including Yahoo Finance and the Federal Reserve Economic Data (FRED) API. 
+The class provides methods to retrieve historical yield data, market data for specified tickers, 
+and perform basic data analysis
+
+"""
 
 import matplotlib.pyplot as plt
 import yfinance as yf
@@ -73,8 +78,19 @@ class DataLoader:
 #########################################################################################################################
 
     
-    def market_data(self, years, tickers, market_ticker = '^GSPC', lookback_window=30):
+    def market_data(self, years: int, tickers: list, market_ticker: str = '^GSPC', lookback_window: int = 30) -> pd.DataFrame:
 
+        """
+        Loads historical price data from Yahoo Finance for the specified tickers and market index.
+        
+        Parameters:
+        years (int): Number of years of historical data to load.
+        tickers (list): List of stock tickers to load data for.
+        market_ticker (str): Ticker symbol for the market index (default is S&P 500).
+        lookback_window (int): Lookback window for calculating rolling statistics (default is 30 days).
+        -> Returns: 
+        pd.DataFrame: A DataFrame containing the raw and log prices for the specified tickers and the market index, along with the highest correlated asset pair.
+        """
         self.years = years
         self.tickers = tickers
         self.market_ticker = market_ticker
@@ -147,7 +163,16 @@ class DataLoader:
         self.ticker_a = ticker_a
         self.ticker_b = ticker_b
 
-def sayields(date):
+def sayields(date: str) -> pd.DataFrame:
+
+    """
+    Fetches South African yield curve data for a given date from the RBond API.
+    
+    Parameters:
+    date (str): The date for which to fetch the yield curve data in 'YYYY-MM-DD' format.
+    -> Returns:
+    pd.DataFrame: A DataFrame containing the yield curve data with 'years_to_maturity' as the index and 'yield_pct' and 'bond_type' as columns.
+    """
     
     url = f'https://rbond.co.za/api/v1/curve/{date}'
     

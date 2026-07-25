@@ -62,15 +62,18 @@ class PairsBacktest:
         self.data = data
 
         # 1. Calculate beta using Linear regression (regress Log_A on Log_B)
-        X = self.data["Log_B"].values.reshape(-1, 1)
-        y = self.data["Log_A"].values.reshape(-1, 1)
+        beta = np.zeros(len(data))
+        for t in range(self.window, len(data)):
+            X = data["Log_B"].iloc[t-self.window:t].values.reshape(-1, 1)
+            y = data["Log_A"].iloc[t-self.window:t].values.reshape(-1, 1)
 
-        lr = LinearRegression()
-        lr.fit(X, y)
-        self.beta = lr.coef_[0][0]
+            lr = LinearRegression()
+            lr.fit(X, y)
+            beta[t] = lr.coef_[0][0]
+        data['Beta'] = beta
 
         # 2. Calculate spreads - spread = lnPa - beta*lnPb
-        self.data["Spread"] = self.data["Log_A"] - (self.beta * self.data["Log_B"])
+        self.data["Spread"] = self.data["Log_A"] - (self.data["Beta"] * self.data["Log_B"])
 
         # 3. Calculate rolling statistics
         self.data["Mean"] = (self.data["Spread"].rolling(window=self.window).mean())
@@ -91,11 +94,11 @@ class PairsBacktest:
         self.data.loc[self.data["Z_Score"] < -self.entry_z, "Pos_B"] = -1.0
 
         # 7. Shift positions by 1 day to strictly prevent look-ahead bias
-        self.data["Active_Pos_A"] = self.data["Pos_A"].shift(1).fillna(0)
-        self.data["Active_Pos_B"] = self.data["Pos_B"].shift(1).fillna(0)
+        self.data["Active_Pos_A"] = self.data['Beta'].shift(1).fillna(0) * self.data["Pos_A"].shift(1).fillna(0)
+        self.data["Active_Pos_B"] = (1 - self.data['Beta'].shift(1).fillna(0)) * self.data["Pos_B"].shift(1).fillna(0)
 
 #########################################################################################################################
-    def run_simulation(self, initial_capital:int =1_00.00, borrow_fee_annual:float=0.02, transaction_cost_per_trade:float = 0.05):
+    def run_simulation(self, initial_capital:int =1_00.00, borrow_fee_annual:float=0.2, transaction_cost_per_trade:float = 0.05):
 
 
         """
@@ -104,7 +107,7 @@ class PairsBacktest:
         Parameters:
         initial_capital (int): The starting capital for the simulation (default is 100.00).
         borrow_fee_annual (float): Annual borrowing fee for short positions (default is 0.02 or 2%).
-        transaction_cost_per_trade (float): Transaction cost per trade as a percentage (default is 0.05 or 5%).
+        transaction_cost_per_trade (float): Transaction cost per trade as a percentage (default is 0.095 or 9.5%).
         -> Returns:
         None: The method modifies the self.data DataFrame in place, adding columns for returns and equity curve.
 

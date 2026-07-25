@@ -78,7 +78,7 @@ class DataLoader:
 #########################################################################################################################
 
     
-    def market_data(self, years: int, tickers: list, market_ticker: str = '^GSPC', lookback_window: int = 30) -> pd.DataFrame:
+    def market_data(self, years: int, tickers: list, market_ticker: str = 'SPY', lookback_window: int = 30) -> pd.DataFrame:
 
         """
         Loads historical price data from Yahoo Finance for the specified tickers and market index.

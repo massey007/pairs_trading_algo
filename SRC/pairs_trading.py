@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")
 class PairsBacktest:
 
     def __init__(
-        self, years, tickers, market_ticker = '^GSPC', lookback_window=30, entry_z=2.0
+        self, years, tickers, market_ticker = 'SPY', lookback_window=30, entry_z=2.0
         ):
 
         """
@@ -95,8 +95,8 @@ class PairsBacktest:
         self.data.loc[self.data["Z_Score"] < -self.entry_z, "Pos_B"] = -1.0
 
         # 7. Shift positions by 1 day to strictly prevent look-ahead bias
-        self.data["Active_Pos_A"] = self.data["Pos_A"].shift(1).fillna(0)
-        self.data["Active_Pos_B"] = self.data["Pos_B"].shift(1).fillna(0)
+        self.data["Active_Pos_A"] = (1- abs(self.data['Beta'])) * self.data["Pos_A"].shift(1).fillna(0)
+        self.data["Active_Pos_B"] = abs(self.data['Beta']) * self.data["Pos_B"].shift(1).fillna(0)
 
 #########################################################################################################################
     def run_simulation(self, initial_capital:int =1_00.00, borrow_fee_annual:float=0.2, transaction_cost_per_trade:float = 0.05):
@@ -223,7 +223,7 @@ class PairsBacktest:
 
         # Regression to get alpha
         X = (market_return_for_regression - daily_risk_free_rate_for_metrics).values.reshape(-1, 1)
-        y = total_strat_return_aligned.values.reshape(-1, 1)
+        y = (total_strat_return_aligned - daily_risk_free_rate_for_metrics).values.reshape(-1, 1)
 
         # Check if X or y are empty after alignment, which would cause issues with lr.fit
         if X.size == 0 or y.size == 0:
@@ -233,7 +233,7 @@ class PairsBacktest:
         lr.fit(X, y)
 
         # Alpha according to the CAPM
-        daily_alpha = lr.intercept_[0] + daily_risk_free_rate_for_metrics.mean()
+        daily_alpha = lr.intercept_[0]
         alpha = daily_alpha * 252 # Annualize alpha
 
         # Calculate total return

@@ -19,6 +19,9 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from fredapi import Fred
 fred = Fred(api_key='17a30f1e933d9c9de2afc4bcd7a5fbcb')
+
+from statsmodels.regression.rolling import RollingOLS
+import statsmodels.api as sm
 import requests
 
 from SRC.data_loader import DataLoader
@@ -61,19 +64,17 @@ class PairsBacktest:
         data = loader.data
         self.data = data
 
-        # 1. Calculate beta using Linear regression (regress Log_A on Log_B)
-        beta = np.zeros(len(data))
-        for t in range(self.window, len(data)):
-            X = data["Log_B"].iloc[t-self.window:t].values.reshape(-1, 1)
-            y = data["Log_A"].iloc[t-self.window:t].values.reshape(-1, 1)
+        # Create a DataFrame for X to preserve column name for beta
+        X = pd.DataFrame(self.data["Log_B"].values, index=self.data.index, columns=['Log_B'])
+        X = sm.add_constant(X)  # Add a constant term for the intercept
+        y = self.data["Log_A"].values
 
-            lr = LinearRegression()
-            lr.fit(X, y)
-            beta[t] = lr.coef_[0][0]
-        data['Beta'] = beta
+        rollin_model = RollingOLS(y, X, window=self.window)
+        rolling_results = rollin_model.fit()
+        rolling_params = rolling_results.params
 
-        # 2. Calculate spreads - spread = lnPa - beta*lnPb
-        self.data["Spread"] = self.data["Log_A"] - (self.data["Beta"] * self.data["Log_B"])
+        self.data['Beta'] = rolling_params['Log_B']
+        self.data['Spread'] = rolling_params['const']
 
         # 3. Calculate rolling statistics
         self.data["Mean"] = (self.data["Spread"].rolling(window=self.window).mean())
@@ -94,8 +95,8 @@ class PairsBacktest:
         self.data.loc[self.data["Z_Score"] < -self.entry_z, "Pos_B"] = -1.0
 
         # 7. Shift positions by 1 day to strictly prevent look-ahead bias
-        self.data["Active_Pos_A"] = self.data['Beta'].shift(1).fillna(0) * self.data["Pos_A"].shift(1).fillna(0)
-        self.data["Active_Pos_B"] = (1 - self.data['Beta'].shift(1).fillna(0)) * self.data["Pos_B"].shift(1).fillna(0)
+        self.data["Active_Pos_A"] = self.data["Pos_A"].shift(1).fillna(0)
+        self.data["Active_Pos_B"] = self.data["Pos_B"].shift(1).fillna(0)
 
 #########################################################################################################################
     def run_simulation(self, initial_capital:int =1_00.00, borrow_fee_annual:float=0.2, transaction_cost_per_trade:float = 0.05):

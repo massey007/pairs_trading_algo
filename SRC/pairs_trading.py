@@ -19,6 +19,9 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from fredapi import Fred
 fred = Fred(api_key='17a30f1e933d9c9de2afc4bcd7a5fbcb')
+
+from statsmodels.regression.rolling import RollingOLS
+import statsmodels.api as sm
 import requests
 
 from SRC.data_loader import DataLoader
@@ -29,7 +32,7 @@ warnings.filterwarnings("ignore")
 class PairsBacktest:
 
     def __init__(
-        self, years, tickers, market_ticker = '^GSPC', lookback_window=30, entry_z=2.0
+        self, years, tickers, market_ticker = 'SPY', lookback_window=30, entry_z=2.0
         ):
 
         """
@@ -61,16 +64,17 @@ class PairsBacktest:
         data = loader.data
         self.data = data
 
-        # 1. Calculate beta using Linear regression (regress Log_A on Log_B)
-        X = self.data["Log_B"].values.reshape(-1, 1)
-        y = self.data["Log_A"].values.reshape(-1, 1)
+        # Create a DataFrame for X to preserve column name for beta
+        X = pd.DataFrame(self.data["Log_B"].values, index=self.data.index, columns=['Log_B'])
+        X = sm.add_constant(X)  # Add a constant term for the intercept
+        y = self.data["Log_A"].values
 
-        lr = LinearRegression()
-        lr.fit(X, y)
-        self.beta = lr.coef_[0][0]
+        rollin_model = RollingOLS(y, X, window=self.window)
+        rolling_results = rollin_model.fit()
+        rolling_params = rolling_results.params
 
-        # 2. Calculate spreads - spread = lnPa - beta*lnPb
-        self.data["Spread"] = self.data["Log_A"] - (self.beta * self.data["Log_B"])
+        self.data['Beta'] = rolling_params['Log_B']
+        self.data['Spread'] = rolling_params['const']
 
         # 3. Calculate rolling statistics
         self.data["Mean"] = (self.data["Spread"].rolling(window=self.window).mean())
@@ -91,11 +95,11 @@ class PairsBacktest:
         self.data.loc[self.data["Z_Score"] < -self.entry_z, "Pos_B"] = -1.0
 
         # 7. Shift positions by 1 day to strictly prevent look-ahead bias
-        self.data["Active_Pos_A"] = self.data["Pos_A"].shift(1).fillna(0)
-        self.data["Active_Pos_B"] = self.data["Pos_B"].shift(1).fillna(0)
+        self.data["Active_Pos_A"] = (1- abs(self.data['Beta'])) * self.data["Pos_A"].shift(1).fillna(0)
+        self.data["Active_Pos_B"] = abs(self.data['Beta']) * self.data["Pos_B"].shift(1).fillna(0)
 
 #########################################################################################################################
-    def run_simulation(self, initial_capital:int =1_00.00, borrow_fee_annual:float=0.02, transaction_cost_per_trade:float = 0.05):
+    def run_simulation(self, initial_capital:int =1_00.00, borrow_fee_annual:float=0.2, transaction_cost_per_trade:float = 0.05):
 
 
         """
@@ -104,7 +108,7 @@ class PairsBacktest:
         Parameters:
         initial_capital (int): The starting capital for the simulation (default is 100.00).
         borrow_fee_annual (float): Annual borrowing fee for short positions (default is 0.02 or 2%).
-        transaction_cost_per_trade (float): Transaction cost per trade as a percentage (default is 0.05 or 5%).
+        transaction_cost_per_trade (float): Transaction cost per trade as a percentage (default is 0.095 or 9.5%).
         -> Returns:
         None: The method modifies the self.data DataFrame in place, adding columns for returns and equity curve.
 
@@ -219,7 +223,7 @@ class PairsBacktest:
 
         # Regression to get alpha
         X = (market_return_for_regression - daily_risk_free_rate_for_metrics).values.reshape(-1, 1)
-        y = total_strat_return_aligned.values.reshape(-1, 1)
+        y = (total_strat_return_aligned - daily_risk_free_rate_for_metrics).values.reshape(-1, 1)
 
         # Check if X or y are empty after alignment, which would cause issues with lr.fit
         if X.size == 0 or y.size == 0:
@@ -229,7 +233,7 @@ class PairsBacktest:
         lr.fit(X, y)
 
         # Alpha according to the CAPM
-        daily_alpha = lr.intercept_[0] + daily_risk_free_rate_for_metrics.mean()
+        daily_alpha = lr.intercept_[0]
         alpha = daily_alpha * 252 # Annualize alpha
 
         # Calculate total return
@@ -253,7 +257,7 @@ class PairsBacktest:
 
         metrics = {
             "Sharpe Ratio"    : f"{sharpe_ratio:.5f}",
-            "Alpha"           : f"{alpha * 100:.5f}%",
+            "Alpha"           : f"{alpha:.5f}%",
             "Total Return"    : f"{total_return:.2%}",
             "Strat Volatility"      : f"{volatility:.5f}",
             "Market Volatility"    : f"{market_volatility:.5f}",

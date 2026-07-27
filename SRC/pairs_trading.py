@@ -257,7 +257,7 @@ class PairsBacktest:
 
         metrics = {
             "Sharpe Ratio"    : f"{sharpe_ratio:.5f}",
-            "Alpha"           : f"{alpha * 100:.5f}%",
+            "Alpha"           : f"{alpha:.5f}%",
             "Total Return"    : f"{total_return:.2%}",
             "Strat Volatility"      : f"{volatility:.5f}",
             "Market Volatility"    : f"{market_volatility:.5f}",
